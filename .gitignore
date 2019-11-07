@@ -1,0 +1,7 @@
+*.pyc
+__pycache__
+*.pkl
+*.npy
+*.txt
+chk_coattention/
+runs/
