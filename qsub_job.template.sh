@@ -19,9 +19,10 @@
 #$ -e log/qsub.err.txt
 
 # CPU resources
+#$ -pe omp 8
 
 # GPU resources
-#$ -l gpus=1
+#$ -l gpus=0.125
 
 # Actual commands
 # load required modules

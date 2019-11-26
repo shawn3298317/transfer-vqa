@@ -22,9 +22,17 @@ class CoattentionNetExperimentRunner(ExperimentRunnerBase):
     """
     Sets up the Co-Attention model for training. This class is specifically responsible for creating the model and optimizing it.
     """
-    def __init__(self, train_image_dir, train_question_path, train_annotation_path,
-                 test_image_dir, test_question_path,test_annotation_path, batch_size, num_epochs,
-                 num_data_loader_workers):
+    def __init__(self,
+                 train_image_dir,
+                 train_question_path,
+                 train_annotation_path,
+                 test_image_dir,
+                 test_question_path,
+                 test_annotation_path,
+                 batch_size,
+                 num_epochs,
+                 num_data_loader_workers,
+                 lr):
 
         self.method = 'coattention'
         print('Loading numpy files. \n')
@@ -34,8 +42,8 @@ class CoattentionNetExperimentRunner(ExperimentRunnerBase):
             a2i = pickle.load(f)
         with open('./data/i2a.pkl', 'rb') as f:
             i2a = pickle.load(f)
-        with open('./data/a2i_count.pkl', 'rb') as f:
-            a2i_count = pickle.load(f)
+        #with open('./data/a2i_count.pkl', 'rb') as f:
+        #    a2i_count = pickle.load(f)
 
         tr_img_names = np.load('./data/tr_img_names.npy', encoding='latin1').tolist()
         tr_img_ids = np.load('./data/tr_img_ids.npy', encoding='latin1').tolist()
@@ -51,7 +59,7 @@ class CoattentionNetExperimentRunner(ExperimentRunnerBase):
                                    question_json_file_path=train_question_path,
                                    annotation_json_file_path=train_annotation_path,
                                    image_filename_pattern="COCO_train2014_{}.jpg",
-                                   q2i=q2i, a2i=a2i, i2a=i2a, a2i_count=a2i_count,
+                                   q2i=q2i, a2i=a2i, i2a=i2a,
                                    img_names=tr_img_names, img_ids=tr_img_ids,
                                    ques_ids=tr_ques_ids, method=self.method,
                                    dataset_type="train", enc_dir='./data/tr_enc')
@@ -60,14 +68,14 @@ class CoattentionNetExperimentRunner(ExperimentRunnerBase):
                                  question_json_file_path=test_question_path,
                                  annotation_json_file_path=test_annotation_path,
                                  image_filename_pattern="COCO_val2014_{}.jpg",
-                                 q2i=q2i, a2i=a2i, i2a=i2a, a2i_count=a2i_count,
+                                 q2i=q2i, a2i=a2i, i2a=i2a,
                                  img_names=va_img_names, img_ids=va_img_ids,
                                  ques_ids=va_ques_ids, method=self.method,
                                  dataset_type="validation", enc_dir='./data/va_enc')
 
-        self._train_dataset_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10, collate_fn=collate_lines)
+        self._train_dataset_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_data_loader_workers, collate_fn=collate_lines)
 
-        self._val_dataset_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, collate_fn=collate_lines)
+        self._val_dataset_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_data_loader_workers, collate_fn=collate_lines)
 
 
         print('Creating Co Attention Model.')

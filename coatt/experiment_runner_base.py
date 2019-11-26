@@ -42,14 +42,15 @@ class ExperimentRunnerBase(object):
                                         {'params': self._model.fc.parameters(), 'lr': 1e-3}
                                        ], weight_decay=1e-8)
         else:
-            self.optimizer = optim.Adam(self._model.parameters(), lr=self._lr, weight_decay=1e-8)
+            #self.optimizer = optim.Adam(self._model.parameters(), lr=self._lr, weight_decay=1e-8)
+            self.optimizer = optim.RMSprop(self._model.parameters(), lr=self._lr, weight_decay=1e-8, momentum=0.99)
         self.criterion = nn.CrossEntropyLoss()
         self.initialize_weights()
 
         #Logger for tensorboard
         self.writer = SummaryWriter()
 
-        self.total_validation_questions = 121512.0
+        self.total_validation_questions = len(self._val_dataset_loader) * self._batch_size
 
         if self.method == 'simple':
             self.chk_dir = './chk_simple/'
@@ -77,7 +78,7 @@ class ExperimentRunnerBase(object):
     def validate(self):
         # TODO. Should return your validation accuracy
         accuracy = 0.0
-        for batch_id, (imgT, quesT, gT) in enumerate(self._val_dataset_loader):
+        for batch_id, (imgT, quesT, gT) in enumerate(tqdm(self._val_dataset_loader)):
             self._model.eval()  # Set the model to train mode
 
             if not self.method == 'simple':
@@ -110,6 +111,10 @@ class ExperimentRunnerBase(object):
             num_batches = len(self._train_dataset_loader)
 
             for batch_id, (imgT, quesT, gT) in enumerate(tqdm(self._train_dataset_loader)):
+                #print("imgT shape", imgT.shape)
+                #print("quesT shape:" , quesT[0].shape, quesT[0])
+                #print("gT shape", gT.shape)
+                #input()
                 self._model.train()  # Set the model to train mode
                 current_step = epoch * num_batches + batch_id
 
@@ -150,7 +155,7 @@ class ExperimentRunnerBase(object):
 
             if (epoch + 1) % self._save_freq == 0 or epoch == self._num_epochs - 1:
                 val_accuracy = self.validate()
-                print("Epoch: {} has val accuracy {}".format(epoch, val_accuracy))
+                print("\nEpoch: {} has val accuracy {}".format(epoch, val_accuracy))
                 self.writer.add_scalar('valid/accuracy', val_accuracy, val_iter)
                 val_iter = val_iter + 1
 

@@ -34,7 +34,7 @@ class VqaDataset(Dataset):
 
     def __init__(self, image_dir, question_json_file_path, annotation_json_file_path,
                  image_filename_pattern, collate=False, q2i=None, a2i=None, i2a=None,
-                 a2i_count=None, img_names=None, img_ids=None, ques_ids=None,
+                 img_names=None, img_ids=None, ques_ids=None,
                  method='simple', dataset_type='train', enc_dir=''):
         """
         Args:
@@ -53,7 +53,7 @@ class VqaDataset(Dataset):
         self.q2i = q2i
         self.a2i = a2i
         self.i2a = i2a
-        self.a2i_count = a2i_count
+        #self.a2i_count = a2i_count
         self.img_ids = img_ids
         self.ques_ids = ques_ids
         self.img_names = img_names
@@ -68,17 +68,17 @@ class VqaDataset(Dataset):
                                                  transforms.ToTensor()])
 
 
-        if not collate:
-            self.img_names = [f for f in os.listdir(self.image_dir) if '.jpg' in f]
-            self.img_ids = []
-            for fname in self.img_names:
-                img_id = fname.split('.')[0].rpartition(img_prefix)[-1]
-                self.img_ids.append(int(img_id))
+        #if not collate:
+        #    self.img_names = [f for f in os.listdir(self.image_dir) if '.jpg' in f]
+        #    self.img_ids = []
+        #    for fname in self.img_names:
+        #        img_id = fname.split('.')[0].rpartition(img_prefix)[-1]
+        #        self.img_ids.append(int(img_id))
 
-            self.ques_ids = self.vqa.getQuesIds(self.img_ids)
+        #    self.ques_ids = self.vqa.getQuesIds(self.img_ids)
 
-            self.q2i, self.a2i, self.i2a, self.a2i_count = pre_process_dataset(image_dir, self.qjson,
-                                                                               self.ajson, img_prefix)
+        #    self.q2i, self.a2i, self.i2a, self.a2i_count = pre_process_dataset(image_dir, self.qjson,
+        #                                                                       self.ajson, img_prefix)
 
         self.q2i_len = len(self.q2i)
         self.a2i_len = len(self.a2i.keys())
@@ -135,14 +135,18 @@ class VqaDataset(Dataset):
             #if not ans['answer_confidence'] == 'yes':
             #    continue
             ans = ans['answer'].lower()
-            if ans in self.a2i.keys() and self.a2i_count[ans] > max_count:
-                max_count = self.a2i_count[ans]
+            if ans in self.a2i.keys():# and self.a2i_count[ans] > max_count:
+                #max_count = self.a2i_count[ans]
                 answer = ans
 
         if answer == "":                                              # only for validation
             gT = torch.from_numpy(np.array([self.a2i_len])).long()
         else:
             gT = torch.from_numpy(np.array([self.a2i[answer]])).long()
+
+        #print("ds: quesT", quesT.shape, quesT)
+        #print("ds: gT", gT.shape)
+        #print("ds: imgT", imgT.shape)
 
         if not self.collate:
             return {'img' : imgT, 'ques' : quesT, 'gt': gT}

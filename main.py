@@ -1,6 +1,7 @@
 import argparse
 from coatt.simple_baseline_experiment_runner import SimpleBaselineExperimentRunner
 from coatt.coattention_experiment_runner import CoattentionNetExperimentRunner
+from coatt.coattention_coco_experiment_runner import CoattentionNetCocoExperimentRunner
 
 
 if __name__ == "__main__":
@@ -16,12 +17,16 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=100)
     parser.add_argument('--num_epochs', type=int, default=10)
     parser.add_argument('--num_data_loader_workers', type=int, default=10)
+    parser.add_argument('--dataset', type=str, default="cocoqa")
+    parser.add_argument('--lr', type=float, default=0.001)
     args = parser.parse_args()
 
     if args.model == "simple":
         experiment_runner_class = SimpleBaselineExperimentRunner
-    elif args.model == "coattention":
+    elif args.model == "coattention" and args.dataset == "vqa":
         experiment_runner_class = CoattentionNetExperimentRunner
+    elif args.model == "coattention" and args.dataset == "cocoqa":
+        experiment_runner_class = CoattentionNetCocoExperimentRunner
     else:
         raise ModuleNotFoundError()
 
@@ -33,5 +38,6 @@ if __name__ == "__main__":
                                                 test_annotation_path=args.test_annotation_path,
                                                 batch_size=args.batch_size,
                                                 num_epochs=args.num_epochs,
-                                                num_data_loader_workers=args.num_data_loader_workers)
+                                                num_data_loader_workers=args.num_data_loader_workers,
+                                                lr=args.lr)
     experiment_runner.train()
