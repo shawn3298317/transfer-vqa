@@ -59,24 +59,8 @@ class CocoQADataset(Dataset):
         self.method = method
         self.collate = collate
 
-        if self.method == 'simple':
-            self.transform = transforms.Compose([transforms.Resize((224, 224)),
-                                                 transforms.ToTensor()])
-        else:
-            self.transform = transforms.Compose([transforms.Resize((448, 448)),
-                                                 transforms.ToTensor()])
-
-        #if not collate:
-        #    self.img_names = [f for f in os.listdir(self.image_dir) if '.jpg' in f]
-        #    self.img_ids = []
-        #    for fname in self.img_names:
-        #        img_id = fname.split('.')[0].rpartition(img_prefix)[-1]
-        #        self.img_ids.append(int(img_id))
-
-        #    self.ques_ids = self.vqa.getQuesIds(self.img_ids)
-
-        #    self.q2i, self.a2i, self.i2a, self.a2i_count = pre_process_dataset(image_dir, self.qjson,
-        #                                                                       self.ajson, img_prefix)
+        self.transform = transforms.Compose([transforms.Resize((448, 448)),
+                                             transforms.ToTensor()])
 
         self.q2i_len = len(self.q2i)
         self.a2i_len = len(self.a2i.keys())
@@ -92,12 +76,10 @@ class CocoQADataset(Dataset):
         imgT = self.transform(img).float()
 
         ques_id = self.ques_ids[idx]
-
         quesT = torch.from_numpy(np.array(ques_id)).long()
-
         answer = self.answers[idx]
 
-        if answer == "":                                              # only for validation
+        if answer == "":
             gT = torch.from_numpy(np.array([len(self.a2i)])).long()
         else:
             gT = torch.from_numpy(np.array([self.a2i[answer]])).long()

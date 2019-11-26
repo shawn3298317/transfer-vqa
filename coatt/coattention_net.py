@@ -88,3 +88,6 @@ class CoattentionNet(nn.Module):
         q = torch.squeeze(torch.matmul(a_q, Q))                  # B x 512
 
         return v, q
+
+    def alternating_co_attention(self, V, Q):
+        pass

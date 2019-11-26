@@ -10,7 +10,7 @@
 #$ -m beas
 
 # Specify hard time limit for the job.
-#$ -l h_rt=24:00:00
+#$ -l h_rt=36:00:00
 
 # Where to stream std out
 #$ -o log/qsub.out.txt
