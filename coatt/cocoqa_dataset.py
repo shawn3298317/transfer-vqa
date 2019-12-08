@@ -25,6 +25,63 @@ def default_loader(path):
     else:
         return pil_loader(path)
 
+class CocoQAXDataset(Dataset):
+    def __init__(self,
+                 image_enc_dir,
+                 image_names,
+                 question_id_file,
+                 answer_text_file,
+                 img_prefix,
+                 collate=False,
+                 enc_idx=None,
+                 q2i=None,
+                 a2i=None,
+                 i2a=None):
+
+        self.image_enc_dir = image_enc_dir
+        self.image_names = image_names
+        self.ques_ids = np.load(question_id_file, allow_pickle=True)
+        self.answers = [s.strip() for s in open(answer_text_file, "r").readlines()]
+        self.enc_idx = enc_idx
+        self.q2i = q2i
+        self.a2i = a2i
+        self.i2a = i2a
+        self.collate = collate
+
+        self.q2i_len = len(self.q2i)
+        self.a2i_len = len(self.a2i.keys())
+        self.q2i_keys = self.q2i.keys()
+
+        self.img_ids = []
+        for fname in self.image_names:
+            img_id = fname.split('.')[0].rpartition(img_prefix)[-1]
+            self.img_ids.append(int(img_id))
+
+    def __len__(self):
+        return len(self.ques_ids)
+
+    def __getitem__(self, idx):
+
+        img_id = self.img_ids[idx]
+        file_idx = self.enc_idx[img_id]
+        path = self.image_enc_dir + '/' + str(file_idx) + '.npz'
+        img = np.load(path)['out']               # 512 x 196
+        imgT = torch.from_numpy(img).float()
+
+        ques_id = self.ques_ids[idx]
+        quesT = torch.from_numpy(np.array(ques_id)).long()
+        answer = self.answers[idx]
+
+        if answer == "":
+            gT = torch.from_numpy(np.array([len(self.a2i)])).long()
+        else:
+            gT = torch.from_numpy(np.array([self.a2i[answer]])).long()
+
+        if not self.collate:
+            return {'img' : imgT, 'ques' : quesT, 'gt': gT}
+
+        return imgT, quesT, gT
+
 
 class CocoQADataset(Dataset):
 

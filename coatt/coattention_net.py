@@ -9,16 +9,23 @@ class CoattentionNet(nn.Module):
     Predicts an answer to a question about an image using the Hierarchical Question-Image Co-Attention
     for Visual Question Answering (Lu et al, 2017) paper.
     """
-    def __init__(self, num_embeddings, num_classes, embed_dim=512, k=30):
+    def __init__(self, num_embeddings, num_classes, embed_dim=512, k=30, training=False):
         super().__init__()
 
+        print("CoattentionNet params:")
+        print("\tnum_embeddings: %i\n\tnum_classes: %i\n\tembed_dim: %i\n\tk: %i\n\ttraining: %i" % (num_embeddings, num_classes, embed_dim, k, training))
+
+        self.training = training
+        self.dropout = 0.0
         self.embed = nn.Embedding(num_embeddings, embed_dim)
+        #self.embed = fn.dropout(self.embed, p=0.5, training=self.training)
+        # TODO: Add dropout(0.5) here
 
         self.unigram_conv = nn.Conv1d(embed_dim, embed_dim, 1, stride=1, padding=0)
-        self.bigram_conv  = nn.Conv1d(embed_dim, embed_dim, 2, stride=1, padding=1, dilation=2)
-        self.trigram_conv = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding=2, dilation=2)
+        self.bigram_conv  = nn.Conv1d(embed_dim, embed_dim, 2, stride=1, padding=1)
+        self.trigram_conv = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding=1)
         self.max_pool = nn.MaxPool2d((3, 1))
-        self.lstm = nn.LSTM(input_size=embed_dim, hidden_size=embed_dim, num_layers=3, dropout=0.4)
+        self.lstm = nn.LSTM(input_size=embed_dim, hidden_size=embed_dim, num_layers=3, dropout=self.dropout)
         self.tanh = nn.Tanh()
 
         self.W_b = nn.Parameter(torch.randn(embed_dim, embed_dim))
@@ -37,13 +44,17 @@ class CoattentionNet(nn.Module):
 
         self.fc = nn.Linear(embed_dim, num_classes)
 
+    def set_training(self, training):
+        self.training = training
+
     def forward(self, image, question):                    # Image: B x 512 x 196
         question, lens = rnn.pad_packed_sequence(question)
         question = question.permute(1, 0)                  # Ques : B x L
         words = self.embed(question).permute(0, 2, 1)      # Words: B x L x 512
 
         unigrams = torch.unsqueeze(self.tanh(self.unigram_conv(words)), 2) # B x 512 x L
-        bigrams  = torch.unsqueeze(self.tanh(self.bigram_conv(words)), 2)  # B x 512 x L
+        bigrams  = torch.unsqueeze(self.tanh(self.bigram_conv(words))[:, : , :-1], 2)  # B x 512 x L
+        # TODO: figure out why bigram padding has to pad on both side
         trigrams = torch.unsqueeze(self.tanh(self.trigram_conv(words)), 2) # B x 512 x L
         words = words.permute(0, 2, 1)
 
@@ -65,18 +76,24 @@ class CoattentionNet(nn.Module):
         #h_s = self.tanh(torch.matmul(torch.cat(((q_sent + v_sent), h_p), dim=1), self.W_s))
 
         h_w = self.tanh(self.W_w(q_word + v_word))
+        h_w = fn.dropout(h_w, p=self.dropout, training=self.training)
         h_p = self.tanh(self.W_p(torch.cat(((q_phrase + v_phrase), h_w), dim=1)))
+        h_p = fn.dropout(h_p, p=self.dropout, training=self.training)
         h_s = self.tanh(self.W_s(torch.cat(((q_sent + v_sent), h_p), dim=1)))
+        h_s = fn.dropout(h_s, p=self.dropout, training=self.training)
 
         logits = self.fc(h_s)
 
         return logits
 
     def parallel_co_attention(self, V, Q):  # V : B x 512 x 196, Q : B x L x 512
+
         C = torch.matmul(Q, torch.matmul(self.W_b, V)) # B x L x 196
 
         H_v = self.tanh(torch.matmul(self.W_v, V) + torch.matmul(torch.matmul(self.W_q, Q.permute(0, 2, 1)), C))                            # B x k x 196
+        H_v = fn.dropout(H_v, p=self.dropout, training=self.training)
         H_q = self.tanh(torch.matmul(self.W_q, Q.permute(0, 2, 1)) + torch.matmul(torch.matmul(self.W_v, V), C.permute(0, 2, 1)))           # B x k x L
+        H_q = fn.dropout(H_q, p=self.dropout, training=self.training)
 
         #a_v = torch.squeeze(fn.softmax(torch.matmul(torch.t(self.w_hv), H_v), dim=2)) # B x 196
         #a_q = torch.squeeze(fn.softmax(torch.matmul(torch.t(self.w_hq), H_q), dim=2)) # B x L

@@ -5,3 +5,4 @@ __pycache__
 *.txt
 chk_coattention/
 runs/
+.ipynb_checkpoints/

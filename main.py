@@ -19,11 +19,13 @@ if __name__ == "__main__":
     parser.add_argument('--num_data_loader_workers', type=int, default=10)
     parser.add_argument('--dataset', type=str, default="cocoqa")
     parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--ckpt', type=str, default="")
+    parser.add_argument('--pre_extract', action='store_true')
     args = parser.parse_args()
 
-    if args.model == "simple":
-        experiment_runner_class = SimpleBaselineExperimentRunner
-    elif args.model == "coattention" and args.dataset == "vqa":
+    #if args.model == "simple":
+    #    experiment_runner_class = SimpleBaselineExperimentRunner
+    if args.model == "coattention" and args.dataset == "vqa":
         experiment_runner_class = CoattentionNetExperimentRunner
     elif args.model == "coattention" and args.dataset == "cocoqa":
         experiment_runner_class = CoattentionNetCocoExperimentRunner
@@ -39,5 +41,7 @@ if __name__ == "__main__":
                                                 batch_size=args.batch_size,
                                                 num_epochs=args.num_epochs,
                                                 num_data_loader_workers=args.num_data_loader_workers,
-                                                lr=args.lr)
+                                                lr=args.lr,
+                                                pre_extract=args.pre_extract)
+                                                #,pre_train_ckpt = args.ckpt)
     experiment_runner.train()

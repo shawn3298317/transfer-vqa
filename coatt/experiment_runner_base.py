@@ -16,7 +16,7 @@ class ExperimentRunnerBase(object):
     Anything specific to a particular experiment (Simple or Coattention) should go in the corresponding subclass.
     """
 
-    def __init__(self, train_dataset, val_dataset, model, batch_size, num_epochs, num_data_loader_workers=10, lr=0.001):
+    def __init__(self, train_dataset, val_dataset, model, batch_size, num_epochs, num_data_loader_workers, lr, pre_extract):#, pre_train_ckpt=""):
         self._model = model
         self._num_epochs = num_epochs
         self._log_freq = 10             # Steps
@@ -25,6 +25,7 @@ class ExperimentRunnerBase(object):
         self._print_freq = 50
         self._batch_size = batch_size
         self._lr = lr
+        self.pre_extract = pre_extract
 
         # Use the GPU if it's available.
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -42,8 +43,8 @@ class ExperimentRunnerBase(object):
                                         {'params': self._model.fc.parameters(), 'lr': 1e-3}
                                        ], weight_decay=1e-8)
         else:
-            #self.optimizer = optim.Adam(self._model.parameters(), lr=self._lr, weight_decay=1e-8)
-            self.optimizer = optim.RMSprop(self._model.parameters(), lr=self._lr, weight_decay=1e-8, momentum=0.99)
+            self.optimizer = optim.Adam(self._model.parameters(), lr=self._lr, weight_decay=1e-8)
+            #self.optimizer = optim.RMSprop(self._model.parameters(), lr=self._lr, weight_decay=1e-8, momentum=0.99)
         self.criterion = nn.CrossEntropyLoss()
         self.initialize_weights()
 
@@ -56,15 +57,16 @@ class ExperimentRunnerBase(object):
             self.chk_dir = './chk_simple/'
         else:
             self.chk_dir = './chk_coattention/'
-            print('Creating Image Encoder')
-            self.img_enc = models.resnet18(pretrained=True)
-            modules = list(self.img_enc.children())[:-2]
-            self.img_enc = nn.Sequential(*modules)
-            for params in self.img_enc.parameters():
-                params.requires_grad = False
-            if self.DEVICE == "cuda":
-                self.img_enc = self.img_enc.cuda()
-            self.img_enc.eval()
+            if self.pre_extract == False:
+                print('Creating Image Encoder')
+                self.img_enc = models.resnet18(pretrained=True)
+                modules = list(self.img_enc.children())[:-2]
+                self.img_enc = nn.Sequential(*modules)
+                for params in self.img_enc.parameters():
+                    params.requires_grad = False
+                if self.DEVICE == "cuda":
+                    self.img_enc = self.img_enc.cuda()
+                self.img_enc.eval()
 
         if not os.path.exists(self.chk_dir):
             os.makedirs(self.chk_dir)
@@ -77,15 +79,18 @@ class ExperimentRunnerBase(object):
 
     def validate(self):
         # TODO. Should return your validation accuracy
+        self._model.set_training(False)
         accuracy = 0.0
         for batch_id, (imgT, quesT, gT) in enumerate(tqdm(self._val_dataset_loader)):
             self._model.eval()  # Set the model to train mode
 
-            if not self.method == 'simple':
-                quesT = rnn.pack_sequence(quesT)
+            quesT = rnn.pack_sequence(quesT)
+            if self.pre_extract == False:
                 imgT = imgT.to(self.DEVICE)
                 imgT = self.img_enc(imgT)
                 imgT = imgT.view(imgT.size(0), imgT.size(1), -1)
+            else:
+                imgT = torch.squeeze(imgT)
 
             imgT, quesT, gT = imgT.to(self.DEVICE), quesT.to(self.DEVICE), gT.to(self.DEVICE)
             gT = torch.squeeze(gT)
@@ -96,6 +101,8 @@ class ExperimentRunnerBase(object):
 
             if (batch_id + 1) % self._print_freq == 0:
                 print('Validation Accuracy: %f' % (accuracy / ((batch_id + 1)*self._batch_size)))
+
+        self._model.set_training(True)
 
         accuracy = accuracy / self.total_validation_questions
         return accuracy
@@ -111,22 +118,20 @@ class ExperimentRunnerBase(object):
             num_batches = len(self._train_dataset_loader)
 
             for batch_id, (imgT, quesT, gT) in enumerate(tqdm(self._train_dataset_loader)):
-                #print("imgT shape", imgT.shape)
-                #print("quesT shape:" , quesT[0].shape, quesT[0])
-                #print("gT shape", gT.shape)
-                #input()
                 self._model.train()  # Set the model to train mode
                 current_step = epoch * num_batches + batch_id
 
                 # ============
                 # TODO: Run the model and get the ground truth answers that you'll pass to your optimizer
                 # This logic should be generic; not specific to either the Simple Baseline or CoAttention.
-                if not self.method == 'simple':
-                    quesT = rnn.pack_sequence(quesT)
+                quesT = rnn.pack_sequence(quesT)
+                if self.pre_extract == False:
                     imgT = imgT.to(self.DEVICE)
                     imgT = self.img_enc(imgT)
                     imgT = imgT.view(imgT.size(0), imgT.size(1), -1)
                 else:
+                    #imgT = imgT.view(imgT.size(0), imgT.size(1), -1)
+                    imgT = torch.squeeze(imgT)
                     imgT = imgT.to(self.DEVICE)
 
                 quesT, gT = quesT.to(self.DEVICE), gT.to(self.DEVICE)

@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from coatt.coattention_net import CoattentionNet
 from coatt.experiment_runner_base import ExperimentRunnerBase
-from coatt.cocoqa_dataset import CocoQADataset
+from coatt.cocoqa_dataset import CocoQADataset, CocoQAXDataset
 
 
 def collate_lines(seq_list):
@@ -32,7 +32,8 @@ class CoattentionNetCocoExperimentRunner(ExperimentRunnerBase):
                  batch_size,
                  num_epochs,
                  num_data_loader_workers,
-                 lr):
+                 lr,
+                 pre_extract):
 
         self.method = 'coattention'
         print('Loading numpy files. \n')
@@ -51,26 +52,59 @@ class CoattentionNetCocoExperimentRunner(ExperimentRunnerBase):
         #va_img_ids = np.load('./data/cocoqa/va_img_ids.npy', encoding='latin1').tolist()
         #va_ques_ids = np.load('./data/cocoqa/va_ques_ids.npy', encoding='latin1').tolist()
 
-        print('Creating Datasets.')
-        train_dataset = CocoQADataset(image_dir=train_image_dir,
-                                      question_id_file=train_question_path,
-                                      answer_text_file=train_annotation_path,
-                                      collate=True,
-                                      image_names=tr_img_names,
-                                      q2i=q2i,
-                                      a2i=a2i,
-                                      i2a=i2a,
-                                      method=self.method)
 
-        val_dataset = CocoQADataset(image_dir=test_image_dir,
-                                    question_id_file=test_question_path,
-                                    answer_text_file=test_annotation_path,
-                                    collate=True,
-                                    image_names=va_img_names,
-                                    q2i=q2i,
-                                    a2i=a2i,
-                                    i2a=i2a,
-                                    method=self.method)
+        if pre_extract == True:
+            tr_enc_idx = np.load("./data/train_enc_idx.npy", allow_pickle=True, encoding="latin1")
+            va_enc_idx = np.load("./data/val_enc_idx.npy", allow_pickle=True, encoding="latin1")
+            tr_enc_dir = "./data/cocoqa/tr_enc/"
+            va_enc_dir = "./data/cocoqa/va_enc/"
+
+
+        if pre_extract == False:
+            print('Creating Datasets.')
+            train_dataset = CocoQADataset(image_dir=train_image_dir,
+                                          question_id_file=train_question_path,
+                                          answer_text_file=train_annotation_path,
+                                          collate=True,
+                                          image_names=tr_img_names,
+                                          q2i=q2i,
+                                          a2i=a2i,
+                                          i2a=i2a,
+                                          method=self.method)
+
+            val_dataset = CocoQADataset(image_dir=test_image_dir,
+                                        question_id_file=test_question_path,
+                                        answer_text_file=test_annotation_path,
+                                        collate=True,
+                                        image_names=va_img_names,
+                                        q2i=q2i,
+                                        a2i=a2i,
+                                        i2a=i2a,
+                                        method=self.method)
+        else:
+            print('Creating Pre-extracted Datasets.')
+            train_dataset = CocoQAXDataset(image_enc_dir=tr_enc_dir,
+                                           image_names=tr_img_names,
+                                           question_id_file=train_question_path,
+                                           answer_text_file=train_annotation_path,
+                                           img_prefix="COCO_train2014_",
+                                           collate=True,
+                                           enc_idx=tr_enc_idx,
+                                           q2i=q2i,
+                                           a2i=a2i,
+                                           i2a=i2a)
+
+            val_dataset = CocoQAXDataset(image_enc_dir=va_enc_dir,
+                                         image_names=va_img_names,
+                                         question_id_file=test_question_path,
+                                         answer_text_file=test_annotation_path,
+                                         img_prefix="COCO_val2014_",
+                                         collate=True,
+                                         enc_idx=va_enc_idx,
+                                         q2i=q2i,
+                                         a2i=a2i,
+                                         i2a=i2a)
+
 
         self._train_dataset_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_data_loader_workers, collate_fn=collate_lines)
 
@@ -78,9 +112,9 @@ class CoattentionNetCocoExperimentRunner(ExperimentRunnerBase):
 
 
         print('Creating Co Attention Model.')
-        model = CoattentionNet(len(q2i), 512).float()
+        model = CoattentionNet(len(q2i), len(a2i), 512, training=True).float()
 
-        super().__init__(train_dataset, val_dataset, model, batch_size, num_epochs, num_data_loader_workers)
+        super().__init__(train_dataset, val_dataset, model, batch_size, num_epochs, num_data_loader_workers, lr, pre_extract)
 
 
     def _optimize(self, predicted_answers, true_answer_ids):

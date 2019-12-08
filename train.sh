@@ -22,5 +22,6 @@ python main.py --model coattention\
                --dataset cocoqa\
                --lr 4e-4\
                --batch_size 256\
-               --num_epochs 256\
-               --num_data_loader_workers 8
+               --num_epochs 400\
+               --num_data_loader_workers 8\
+               --pre_extract

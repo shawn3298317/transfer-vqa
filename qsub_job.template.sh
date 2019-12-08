@@ -23,6 +23,7 @@
 
 # GPU resources
 #$ -l gpus=0.125
+#$ -l gpu_memory=12G
 
 # Actual commands
 # load required modules
