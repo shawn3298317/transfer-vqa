@@ -116,7 +116,7 @@ class CocoQADataset(Dataset):
         self.method = method
         self.collate = collate
 
-        self.transform = transforms.Compose([transforms.Resize((448, 448)),
+        self.transform = transforms.Compose([transforms.Resize((224, 224)),
                                              transforms.ToTensor()])
 
         self.q2i_len = len(self.q2i)

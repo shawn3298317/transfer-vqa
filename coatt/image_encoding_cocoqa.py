@@ -42,14 +42,16 @@ class CocoQAImgDataset(Dataset):
         self.image_dir = image_dir
         self.image_names = image_names
         self.transform = transforms.Compose([transforms.Resize((224, 224)),
-                                             transforms.ToTensor()])
+                                             transforms.ToTensor(),
+                                             transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                                  std=[0.229, 0.224, 0.225])])
 
         img_ids = {}
         for idx, fname in enumerate(self.image_names):
             img_id = fname.split('.')[0].rpartition(img_prefix)[-1]
             img_ids[int(img_id)] = idx
 
-        with open('./data/' + name + '_enc_idx.npy', 'wb') as f:
+        with open('./data/cocoqa/' + name + '_enc_idx_res50.npy', 'wb') as f:
             pickle.dump(img_ids, f)
 
 
@@ -71,6 +73,7 @@ tr_out_dir = './data/cocoqa/tr_enc_res50'
 va_out_dir = './data/cocoqa/va_enc_res50'
 cnn_type = "resnet50"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using device:", DEVICE)
 
 # Init pre-trained CNN
 if cnn_type == "resnet18":

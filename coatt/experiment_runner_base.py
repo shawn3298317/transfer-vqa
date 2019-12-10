@@ -116,7 +116,7 @@ class ExperimentRunnerBase(object):
             if (epoch + 1) // 3 == 0:
                 self.adjust_learning_rate(epoch + 1)
             num_batches = len(self._train_dataset_loader)
-
+            accuracy = 0.0
             for batch_id, (imgT, quesT, gT) in enumerate(tqdm(self._train_dataset_loader)):
                 self._model.train()  # Set the model to train mode
                 current_step = epoch * num_batches + batch_id
@@ -137,6 +137,10 @@ class ExperimentRunnerBase(object):
                 quesT, gT = quesT.to(self.DEVICE), gT.to(self.DEVICE)
                 predicted_answer = self._model(imgT, quesT) # TODO
                 ground_truth_answer = torch.squeeze(gT)     # TODO
+                for i in range(ground_truth_answer.shape[0]):
+                    if torch.argmax(predicted_answer[i]).item() == ground_truth_answer[i]:
+                        accuracy = accuracy + 1.0
+
                 # ============
 
                 # Optimize the model according to the predictions
@@ -159,8 +163,10 @@ class ExperimentRunnerBase(object):
 #                    val_iter = val_iter + 1
 
             if (epoch + 1) % self._save_freq == 0 or epoch == self._num_epochs - 1:
+                train_accuracy = accuracy / (len(self._train_dataset_loader)*self._batch_size)
                 val_accuracy = self.validate()
                 print("\nEpoch: {} has val accuracy {}".format(epoch, val_accuracy))
+                self.writer.add_scalar("train/accuracy", train_accuracy, val_iter)
                 self.writer.add_scalar('valid/accuracy', val_accuracy, val_iter)
                 val_iter = val_iter + 1
 

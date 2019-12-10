@@ -56,8 +56,8 @@ class CoattentionNetCocoExperimentRunner(ExperimentRunnerBase):
         if pre_extract == True:
             tr_enc_idx = np.load("./data/train_enc_idx.npy", allow_pickle=True, encoding="latin1")
             va_enc_idx = np.load("./data/val_enc_idx.npy", allow_pickle=True, encoding="latin1")
-            tr_enc_dir = "./data/cocoqa/tr_enc/"
-            va_enc_dir = "./data/cocoqa/va_enc/"
+            tr_enc_dir = "./data/cocoqa/tr_enc_res50/"
+            va_enc_dir = "./data/cocoqa/va_enc_res50/"
 
 
         if pre_extract == False:
@@ -112,7 +112,7 @@ class CoattentionNetCocoExperimentRunner(ExperimentRunnerBase):
 
 
         print('Creating Co Attention Model.')
-        model = CoattentionNet(len(q2i), len(a2i), 512, training=True).float()
+        model = CoattentionNet(len(q2i), len(a2i), 2048, training=True).float()
 
         super().__init__(train_dataset, val_dataset, model, batch_size, num_epochs, num_data_loader_workers, lr, pre_extract)
 

@@ -21,7 +21,7 @@ python main.py --model coattention\
                --test_annotation_path ${DATASET_PATH}test/answers.txt\
                --dataset cocoqa\
                --lr 4e-4\
-               --batch_size 256\
+               --batch_size 64\
                --num_epochs 400\
                --num_data_loader_workers 8\
                --pre_extract

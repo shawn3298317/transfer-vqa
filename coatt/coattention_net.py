@@ -16,7 +16,7 @@ class CoattentionNet(nn.Module):
         print("\tnum_embeddings: %i\n\tnum_classes: %i\n\tembed_dim: %i\n\tk: %i\n\ttraining: %i" % (num_embeddings, num_classes, embed_dim, k, training))
 
         self.training = training
-        self.dropout = 0.0
+        self.dropout = 0.5
         self.embed = nn.Embedding(num_embeddings, embed_dim)
         #self.embed = fn.dropout(self.embed, p=0.5, training=self.training)
         # TODO: Add dropout(0.5) here
